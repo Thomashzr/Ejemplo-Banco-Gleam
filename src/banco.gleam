@@ -4,6 +4,7 @@ pub type Account {
 
 pub type BankError {
   InvalidAmount
+  InsufficientFunds
 }
 
 pub fn deposit(account: Account, amount: Int) -> Result(Account, BankError) {
@@ -13,14 +14,24 @@ pub fn deposit(account: Account, amount: Int) -> Result(Account, BankError) {
   }
 }
 
+pub fn withdraw(account: Account, amount: Int) -> Result(Account, BankError) {
+  case amount {
+    amount if amount <= 0 -> Error(InsufficientFunds)
+
+    amount if amount > account.balance -> Error(InsufficientFunds)
+
+    amount -> Ok(Account(..account, balance: account.balance - amount))
+  }
+}
+
 pub fn main() {
   let account = Account(id: 1, owner: "Thomas", balance: 1000)
 
-  let valid_deposit = deposit(account, 500)
+  echo account
 
-  echo valid_deposit
+  echo deposit(account, 500)
 
-  let invalid_deposit = deposit(account, -200)
+  echo withdraw(account, 300)
 
-  echo invalid_deposit
+  echo withdraw(account, 2000)
 }
