@@ -1,3 +1,5 @@
+import gleam/result
+
 pub type Account {
   Account(id: Int, owner: String, balance: Int)
 }
@@ -5,6 +7,13 @@ pub type Account {
 pub type BankError {
   InvalidAmount
   InsufficientFunds
+}
+
+pub fn operations(account: Account) -> Result(Account, BankError) {
+  use account <- result.try(deposit(account, 500))
+  use account <- result.try(withdraw(account, 300))
+
+  Ok(account)
 }
 
 pub fn deposit(account: Account, amount: Int) -> Result(Account, BankError) {
@@ -27,11 +36,5 @@ pub fn withdraw(account: Account, amount: Int) -> Result(Account, BankError) {
 pub fn main() {
   let account = Account(id: 1, owner: "Thomas", balance: 1000)
 
-  echo account
-
-  echo deposit(account, 500)
-
-  echo withdraw(account, 300)
-
-  echo withdraw(account, 2000)
+  echo operations(account)
 }
