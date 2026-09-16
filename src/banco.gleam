@@ -40,22 +40,20 @@ pub fn transfer(
   amount: Int,
 ) -> Result(#(Account, Account), BankError) {
   case from.id == to.id {
-    True ->
-    Error(SameAccount)
+    True -> Error(SameAccount)
 
     False -> {
+      use updated_from <- result.try(withdraw(from, amount))
+      use updated_to <- result.try(deposit(to, amount))
 
-  use updated_from <- result.try(withdraw(from, amount))
-  use updated_to <- result.try(deposit(to, amount))
-
-  Ok(#(updated_from, updated_to))
-}
+      Ok(#(updated_from, updated_to))
+    }
   }
 }
 
 pub fn main() {
   let account_a = Account(id: 1, owner: "Thomas", balance: 1000)
-  let account_b = Account(id:2, owner: "Eric", balance: 500)
+  let account_b = Account(id: 2, owner: "Eric", balance: 500)
 
   case transfer(account_a, account_b, 300) {
     Ok(#(new_a, new_b)) -> {
