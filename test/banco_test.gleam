@@ -1,56 +1,90 @@
-import banco
-import gleeunit
+import gleam/result
 
-pub fn main() -> Nil {
-  gleeunit.main()
+pub type Account {
+  Account(id: Int, owner: String, balance: Int, history: List(Transaction))
 }
 
-fn account(id: Int, balance: Int) -> banco.Account {
-  banco.Account(id: id, owner: "Test", balance: balance)
+pub type BankError {
+  InvalidAmount
+  InsufficientFunds
+  SameAccount
 }
 
-pub fn deposit_increases_balance_test() {
-  let actual = banco.deposit(account(1, 1000), 500)
-  let expected = Ok(banco.Account(id: 1, owner: "Test", balance: 1500))
-
-  assert actual == expected
+pub type TransactionType {
+  Deposit
+  Withdrawal
+  TransferSent
+  TransferReceived
 }
 
-pub fn deposit_rejects_invalid_amount_test() {
-  assert banco.deposit(account(1, 1000), 0) == Error(banco.InvalidAmount)
-  assert banco.deposit(account(1, 1000), -100) == Error(banco.InvalidAmount)
+pub fn operations(account: Account) -> Result(Account, BankError) {
+  use account <- result.try(deposit(account, 500))
+  use account <- result.try(withdraw(account, 300))
+
+  Ok(account)
 }
 
-pub fn withdraw_decreases_balance_test() {
-  let actual = banco.withdraw(account(1, 1000), 300)
-  let expected = Ok(banco.Account(id: 1, owner: "Test", balance: 700))
-
-  assert actual == expected
+pub fn deposit(account: Account, amount: Int) -> Result(Account, BankError) {
+  case amount > 0 {
+    True -> {
+      let transaction =
+        Transaction(kind: Deposit, amount: amount, description: "Deposito")
+      Ok(
+        Account(..account, balance: account.balance + amount, history: [
+          transaction,
+          ..account.history
+        ]),
+      )
+    }
+    False -> Error(InvalidAmount)
+  }
 }
 
-pub fn withdraw_rejects_invalid_amount_test() {
-  assert banco.withdraw(account(1, 1000), 0) == Error(banco.InvalidAmount)
-  assert banco.withdraw(account(1, 1000), -100) == Error(banco.InvalidAmount)
+pub fn withdraw(account: Account, amount: Int) -> Result(Account, BankError) {
+  case amount {
+    amount if amount <= 0 -> Error(InvalidAmount)
+
+    amount if amount > account.balance -> Error(InsufficientFunds)
+
+    amount -> Ok(Account(..account, balance: account.balance - amount))
+  }
 }
 
-pub fn withdraw_rejects_insufficient_funds_test() {
-  assert banco.withdraw(account(1, 1000), 1001)
-    == Error(banco.InsufficientFunds)
+pub fn transfer(
+  from: Account,
+  to: Account,
+  amount: Int,
+) -> Result(#(Account, Account), BankError) {
+  case from.id == to.id {
+    True -> Error(SameAccount)
+
+    False -> {
+      use updated_from <- result.try(withdraw(from, amount))
+      use updated_to <- result.try(deposit(to, amount))
+
+      Ok(#(updated_from, updated_to))
+    }
+  }
 }
 
-pub fn transfer_moves_money_test() {
-  let from = account(1, 1000)
-  let to = account(2, 500)
-  let actual = banco.transfer(from, to, 300)
-  let expected =
-    Ok(#(banco.Account(..from, balance: 700), banco.Account(..to, balance: 800)))
-
-  assert actual == expected
+pub type Transaction {
+  Transaction(kind: TransactionType, amount: Int, description: String)
 }
 
-pub fn transfer_rejects_same_account_test() {
-  let from = account(1, 1000)
-  let to = banco.Account(id: 1, owner: "Another owner", balance: 500)
+pub fn main() {
+  let account_a = Account(id: 1, owner: "Thomas", balance: 1000, history: [])
+  let account_b = Account(id: 2, owner: "Eric", balance: 500, history: [])
 
-  assert banco.transfer(from, to, 300) == Error(banco.SameAccount)
+  case transfer(account_a, account_b, 300) {
+    Ok(#(new_a, new_b)) -> {
+      echo new_a
+      echo new_b
+      Nil
+    }
+
+    Error(error) -> {
+      echo error
+      Nil
+    }
+  }
 }

@@ -1,13 +1,20 @@
 import gleam/result
 
 pub type Account {
-  Account(id: Int, owner: String, balance: Int)
+  Account(id: Int, owner: String, balance: Int, history: List(Transaction))
 }
 
 pub type BankError {
   InvalidAmount
   InsufficientFunds
   SameAccount
+}
+
+pub type TransactionType {
+  Deposit
+  Withdrawal
+  TransferSent
+  TransferReceived
 }
 
 pub fn operations(account: Account) -> Result(Account, BankError) {
@@ -19,7 +26,16 @@ pub fn operations(account: Account) -> Result(Account, BankError) {
 
 pub fn deposit(account: Account, amount: Int) -> Result(Account, BankError) {
   case amount > 0 {
-    True -> Ok(Account(..account, balance: account.balance + amount))
+    True -> {
+      let transaction =
+        Transaction(kind: Deposit, amount: amount, description: "Deposito")
+      Ok(
+        Account(..account, balance: account.balance + amount, history: [
+          transaction,
+          ..account.history
+        ]),
+      )
+    }
     False -> Error(InvalidAmount)
   }
 }
@@ -51,9 +67,13 @@ pub fn transfer(
   }
 }
 
+pub type Transaction {
+  Transaction(kind: TransactionType, amount: Int, description: String)
+}
+
 pub fn main() {
-  let account_a = Account(id: 1, owner: "Thomas", balance: 1000)
-  let account_b = Account(id: 2, owner: "Eric", balance: 500)
+  let account_a = Account(id: 1, owner: "Thomas", balance: 1000, history: [])
+  let account_b = Account(id: 2, owner: "Eric", balance: 500, history: [])
 
   case transfer(account_a, account_b, 300) {
     Ok(#(new_a, new_b)) -> {
